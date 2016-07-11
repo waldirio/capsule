@@ -1,5 +1,19 @@
 #!/bin/bash
- 
+
+
+#
+# Date ......: 07/08/2016
+# Developer .: Chris Roberts <chrobert@redhat.com>
+# Purpose ...: Remove all files from Satellite Capsule
+# Changelog .:
+#              07/11/2016 - Review in the bash script for Waldirio M Pinheiro <waldirio@redhat.com>
+#              - Changed the logic at the end of script, just to confirm and call the remove function.
+#	       - Main menu in function
+#
+
+LOG="/var/log/capsule-clean.log"
+
+
 function remove() {
 
 CONFIG_FILES=(
@@ -97,65 +111,80 @@ CERT_FILES=(
  
 # stopping all katello/foreman related services
  
-katello-service stop
+  echo "Stopping Satellite Capsule"			| tee -a $LOG
+  katello-service stop					| tee -a $LOG
  
-echo "Removing RPMs"
-yum erase -y ${RPMS[*]}
+  echo "Removing RPMs"					| tee -a $LOG
+  yum erase -y ${RPMS[*]}				| tee -a $LOG
  
-echo "Cleaning up configuration files"
-rm -rf ${CONFIG_FILES[*]}
+  echo "Cleaning up configuration files"		| tee -a $LOG
+  # Conf files				
+  rm -rf ${CONFIG_FILES[*]}				| tee -a $LOG
  
-echo "Cleaning up log files"
-# logs
-rm -rf ${LOG_FILES[*]}
+  echo "Cleaning up log files"				| tee -a $LOG
+  # logs
+  rm -rf ${LOG_FILES[*]}				| tee -a $LOG
  
-echo "Cleaning up Certs"
-# pulp cert stuff
-rm -rf ${CERT_FILES[*]}
+  echo "Cleaning up Certs"				| tee -a $LOG
+  # pulp cert stuff
+  rm -rf ${CERT_FILES[*]}				| tee -a $LOG
 }
 
+
+menu()
+{
+  clear 
+  echo ""
+  echo "WARNING: This script will erase many packages and config files."
+  echo "Important packages such as the following will be removed:"
+  echo ""
+  echo "  * httpd (apache)"
+  echo "  * mongodb"
+  echo "  * tomcat"
+  echo "  * puppet"
+  echo "  * ruby"
+  echo "  * rubygems"
+  echo "  * All Katello and Foreman Packages"
+  echo ""
+  echo "Once these packages and configuration files are removed there is no going back."
+  echo "If you use this system for anything other than Katello and Foreman you probably"
+  echo "do not want to execute this script."
+  echo ""
+  read -p "Read the source for a list of what is removed.  Are you sure(Y/N)? " -n 1 -r
+  echo    # (optional) move to a new line
+  if [[ ! $REPLY =~ ^[Yy]$ ]]
+  then
+      echo "** cancelled **"
+      exit 1
+  fi
+ 
+  echo ""
+  echo "ARE YOU SURE?: This script permanently deletes data and configuration."
+  read -p "Read the source for a list of what is removed.  Type [remove] to continue? " -r
+  echo    # (optional) move to a new line
+  if [[ ! $REPLY == remove ]]
+  then
+      echo "** cancelled **"
+      exit 1
+  else
+      echo "Confirmed! Let's remove all files"
+      remove
+  fi
+}
+
+# In case of --help or -h
 for var in $@; do
    if [[ $var == "--help" || $var == "-h" ]]
-       then echo -e "This script is used to remove all capsule related packages and services. \nThis should only be used if you are sure you are wanting to completely remove Capsule from this machine and lose all of your settings and synced content."
-       exit 1
+       then 
+           echo -e "This script is used to remove all capsule related packages and services. \nThis should only be used if you are sure you are wanting to completely remove Capsule from this machine and lose all of your settings and synced content."
+           exit 1
    if [[$var == "--unattended" ]]  
        then remove
   fi
 fi
 done
- 
-echo ""
-echo "WARNING: This script will erase many packages and config files."
-echo "Important packages such as the following will be removed:"
-echo ""
-echo "  * httpd (apache)"
-echo "  * mongodb"
-echo "  * tomcat"
-echo "  * puppet"
-echo "  * ruby"
-echo "  * rubygems"
-echo "  * All Katello and Foreman Packages"
-echo ""
-echo "Once these packages and configuration files are removed there is no going back."
-echo "If you use this system for anything other than Katello and Foreman you probably"
-echo "do not want to execute this script."
-echo ""
-read -p "Read the source for a list of what is removed.  Are you sure(Y/N)? " -n 1 -r
-echo    # (optional) move to a new line
-if [[ ! $REPLY =~ ^[Yy]$ ]]
-then
-    echo "** cancelled **"
-    exit 1
-fi
- 
-echo ""
-echo "ARE YOU SURE?: This script permanently deletes data and configuration."
-read -p "Read the source for a list of what is removed.  Type [remove] to continue? " -r
-echo    # (optional) move to a new line
-if [[ ! $REPLY = remove ]]
-then
-    echo "** cancelled **"
-    exit 1
-fi
-remove
 
+
+
+# Principal
+menu
